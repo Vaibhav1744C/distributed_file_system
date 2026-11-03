@@ -1,570 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Distributed File System | Windows OS Architecture Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
-  <!-- Header Banner -->
-  <header class="top-header">
-    <div class="header-left">
-      <div class="logo-badge">
-        <svg class="icon-dfs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-          <polyline points="2 17 12 22 22 17"></polyline>
-          <polyline points="2 12 12 17 22 12"></polyline>
-        </svg>
-      </div>
-      <div>
-        <h1 class="main-title">Distributed File System with OS-Level Resource Management</h1>
-        <p class="subtitle">Windows-Native Architecture &bull; Winsock2 &bull; C++20 &bull; Concurrency &bull; Fault Tolerance</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="pulse-indicator">
-        <span class="pulse-dot"></span>
-        <span id="clusterStatusText">CLUSTER ONLINE</span>
-      </div>
-      <div class="stat-pill">
-        <span class="pill-label">Coordinator PID:</span>
-        <span id="coordPid" class="pill-val">--</span>
-      </div>
-      <div class="stat-pill">
-        <span class="pill-label">Active Threads:</span>
-        <span id="activeThreads" class="pill-val">--</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Top KPI Ribbon -->
-  <section class="kpi-ribbon">
-    <div class="kpi-card">
-      <span class="kpi-title">Healthy Storage Nodes</span>
-      <span id="kpiNodes" class="kpi-value text-cyan">-- / 3</span>
-      <span class="kpi-sub">Winsock2 TCP Replicas</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-title">Total Managed Files</span>
-      <span id="kpiFiles" class="kpi-value text-indigo">--</span>
-      <span class="kpi-sub">SQLite Metadata Store</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-title">Scheduler Algorithm</span>
-      <span id="kpiScheduler" class="kpi-value text-emerald">FCFS</span>
-      <span class="kpi-sub" id="kpiThroughput">0.0 ops/sec</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-title">Buffer Occupancy</span>
-      <span id="kpiBuffer" class="kpi-value text-amber">0%</span>
-      <span class="kpi-sub" id="kpiBlocked">0 Blocked Producers</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-title">Cache Hit Ratio</span>
-      <span id="kpiCache" class="kpi-value text-purple">0.0%</span>
-      <span class="kpi-sub" id="kpiCacheHits">0 Hits / 0 Misses</span>
-    </div>
-  </section>
-
-  <!-- Navigation Tabs -->
-  <nav class="nav-tabs">
-    <button class="tab-btn active" data-tab="nodes">Storage Nodes &amp; Fault Injection</button>
-    <button class="tab-btn" data-tab="files">File Explorer &amp; Replicas</button>
-    <button class="tab-btn" data-tab="scheduler">Request Scheduling &amp; Processes</button>
-    <button class="tab-btn" data-tab="buffer">Memory Buffer &amp; Cache</button>
-    <button class="tab-btn" data-tab="sync">Synchronization &amp; Deadlocks</button>
-    <button class="tab-btn" data-tab="recovery">Crash Recovery &amp; WAL</button>
-    <button class="tab-btn" data-tab="disksim">Disk Seek Simulator</button>
-    <button class="tab-btn" data-tab="audit">Security &amp; Audit Trail</button>
-  </nav>
-
-  <!-- Main Content Container -->
-  <main class="content-container">
-
-    <!-- TAB 1: Storage Nodes & Fault Tolerance -->
-    <section id="tab-nodes" class="tab-pane active">
-      <div class="section-header">
-        <div>
-          <h2>Storage Node Clusters &amp; Fault Injection Controls</h2>
-          <p class="section-desc">Independent Win32 processes storing distributed chunks. Simulate node crash and observe failover reads and re-replication.</p>
-        </div>
-      </div>
-
-      <div class="nodes-grid" id="nodesContainer">
-        <!-- Node cards injected dynamically -->
-      </div>
-
-      <div class="card mt-4">
-        <div class="card-header">
-          <h3>Fault Tolerance &amp; Failover Architecture Verification</h3>
-        </div>
-        <div class="card-body">
-          <div class="architecture-steps">
-            <div class="arch-step">
-              <span class="step-num">1</span>
-              <h4>Configurable Replication</h4>
-              <p>Each uploaded file is divided into 64KB chunks and replicated across configurable independent storage node processes.</p>
-            </div>
-            <div class="arch-step">
-              <span class="step-num">2</span>
-              <h4>Heartbeat &amp; Failure Detection</h4>
-              <p>Storage nodes stream periodic TCP heartbeats. If a node fails for &gt; 5 seconds, it is marked OFFLINE.</p>
-            </div>
-            <div class="arch-step">
-              <span class="step-num">3</span>
-              <h4>Seamless Failover Reads</h4>
-              <p>When reading a file whose primary replica is down, the coordinator transparently falls back to healthy surviving replicas.</p>
-            </div>
-            <div class="arch-step">
-              <span class="step-num">4</span>
-              <h4>Automatic Re-Replication</h4>
-              <p>Background health monitor identifies under-replicated chunks and copies them to available healthy nodes.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 2: File Explorer & Replicas -->
-    <section id="tab-files" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Distributed File Explorer</h2>
-          <p class="section-desc">Manage files, inspect chunk distributions, verify SHA-256 integrity, and explore version history.</p>
-        </div>
-        <div class="actions-group">
-          <button class="btn btn-primary" id="openUploadModalBtn">Upload New File</button>
-          <button class="btn btn-secondary" id="refreshFilesBtn">Refresh</button>
-        </div>
-      </div>
-
-      <!-- Upload Modal / Drawer -->
-      <div class="card mb-4" id="uploadCard" style="display: none;">
-        <div class="card-header">
-          <h3>Upload File to Distributed System</h3>
-          <button class="btn-close" id="closeUploadBtn">&times;</button>
-        </div>
-        <div class="card-body">
-          <form id="uploadForm">
-            <div class="form-row">
-              <div class="form-group flex-2">
-                <label for="uploadPath">DFS Virtual Path</label>
-                <input type="text" id="uploadPath" placeholder="/documents/report.txt" required>
-              </div>
-              <div class="form-group flex-1">
-                <label for="uploadRepl">Replication Factor</label>
-                <select id="uploadRepl">
-                  <option value="2" selected>2 Replicas</option>
-                  <option value="3">3 Replicas (Full)</option>
-                  <option value="1">1 Replica (No redundancy)</option>
-                </select>
-              </div>
-              <div class="form-group flex-1">
-                <label for="uploadUser">Owner</label>
-                <input type="text" id="uploadUser" value="admin">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="uploadContent">File Content (Text or Payload)</label>
-              <textarea id="uploadContent" rows="4" placeholder="Enter file text contents..."></textarea>
-            </div>
-            <button type="submit" class="btn btn-success">Execute Distributed Upload</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>Active Files &amp; Storage Layout</h3>
-          <div class="search-box">
-            <input type="text" id="fileSearchInput" placeholder="Filter files...">
-          </div>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table" id="filesTable">
-            <thead>
-              <tr>
-                <th>Path</th>
-                <th>Size</th>
-                <th>Owner</th>
-                <th>Version</th>
-                <th>SHA-256 Checksum</th>
-                <th>Replicas</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="filesTableBody">
-              <tr><td colspan="7" class="text-center">Loading files...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Version History Subpanel -->
-      <div class="card mt-4" id="versionCard" style="display: none;">
-        <div class="card-header">
-          <h3>Version History: <span id="versionPathTitle" class="text-cyan">--</span></h3>
-          <button class="btn-close" id="closeVersionBtn">&times;</button>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Version</th>
-                <th>Size</th>
-                <th>SHA-256</th>
-                <th>Created At</th>
-                <th>Author</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="versionTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 3: Request Scheduling & Processes -->
-    <section id="tab-scheduler" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>CPU &amp; Request Scheduling (OS Module B)</h2>
-          <p class="section-desc">Real application-level request queue controlling execution order using FCFS, Priority Scheduling, or Round Robin.</p>
-        </div>
-        <div class="algo-selector">
-          <label>Scheduling Policy:</label>
-          <select id="algoSelect">
-            <option value="FCFS">FCFS (First-Come, First-Served)</option>
-            <option value="PRIORITY">Priority Scheduling (Aging Enabled)</option>
-            <option value="ROUND_ROBIN">Round Robin (Time Quantum 50ms)</option>
-          </select>
-          <button class="btn btn-primary" id="setAlgoBtn">Apply Algorithm</button>
-        </div>
-      </div>
-
-      <div class="grid-2col">
-        <!-- Live Request Queue -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Pending Request Queue (Depth: <span id="queueDepth">0</span>)</h3>
-          </div>
-          <div class="card-body">
-            <div class="queue-visualizer" id="queueVisualizer">
-              <div class="empty-state">No pending requests in queue</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Scheduling Metrics -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Scheduling Performance Metrics</h3>
-          </div>
-          <div class="card-body">
-            <div class="metrics-grid">
-              <div class="metric-box">
-                <span class="m-label">Avg Waiting Time:</span>
-                <span id="metricWaitTime" class="m-val text-amber">0.00 ms</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Avg Response Time:</span>
-                <span id="metricRespTime" class="m-val text-cyan">0.00 ms</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Avg Turnaround Time:</span>
-                <span id="metricTurnaround" class="m-val text-indigo">0.00 ms</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">System Throughput:</span>
-                <span id="metricThroughput" class="m-val text-emerald">0.0 ops/sec</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Native Win32 Process Table -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h3>Native Windows Process &amp; Thread Management (OS Module A)</h3>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Process Name</th>
-                <th>PID</th>
-                <th>Role</th>
-                <th>Memory (Working Set)</th>
-                <th>Port</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="processTableBody">
-              <!-- Injected via app.js -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 4: Memory Buffer & Cache -->
-    <section id="tab-buffer" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Memory, Buffer &amp; Caching (OS Modules C &amp; G)</h2>
-          <p class="section-desc">Bounded Producer-Consumer Ring Buffer with condition-variable backpressure and In-Memory LRU Distributed Cache.</p>
-        </div>
-      </div>
-
-      <div class="grid-2col">
-        <!-- Bounded Buffer Panel -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Bounded Ring Buffer (Chunk Streaming)</h3>
-          </div>
-          <div class="card-body">
-            <div class="buffer-gauge-wrapper">
-              <div class="gauge-title">Buffer Occupancy: <span id="bufOccupancyText">0 / 16 Slots</span></div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="bufFillBar" style="width: 0%;"></div>
-              </div>
-            </div>
-            <div class="metrics-grid mt-3">
-              <div class="metric-box">
-                <span class="m-label">Total Produced:</span>
-                <span id="bufProduced" class="m-val">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Total Consumed:</span>
-                <span id="bufConsumed" class="m-val">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Blocked Producers (Backpressure):</span>
-                <span id="bufBlockedProd" class="m-val text-rose">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">High Watermark:</span>
-                <span id="bufWatermark" class="m-val text-amber">0%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- LRU Cache Panel -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Distributed LRU File Cache</h3>
-            <button class="btn btn-sm btn-secondary" id="clearCacheBtn">Clear Cache</button>
-          </div>
-          <div class="card-body">
-            <div class="metrics-grid">
-              <div class="metric-box">
-                <span class="m-label">Cache Hit Ratio:</span>
-                <span id="cacheRatio" class="m-val text-emerald">0.0%</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Cache Capacity:</span>
-                <span id="cacheCap" class="m-val">64 items</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Evictions (LRU):</span>
-                <span id="cacheEvict" class="m-val">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Invalidations (on Write):</span>
-                <span id="cacheInval" class="m-val text-amber">0</span>
-              </div>
-            </div>
-            <h4 class="mt-3">Currently Cached Keys:</h4>
-            <div class="cached-keys-list" id="cachedKeysList">
-              <span class="text-muted">Cache is currently empty</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 5: Synchronization & Deadlocks -->
-    <section id="tab-sync" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Synchronization, Locks &amp; Deadlock Prevention (OS Module D)</h2>
-          <p class="section-desc">Reader-Writer Locks, timeouts, lock hierarchy ordering (Havender's Rule), and Wait-For Graph cycle detection.</p>
-        </div>
-      </div>
-
-      <div class="grid-2col">
-        <!-- Active Locks -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Active Resource Locks</h3>
-          </div>
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Resource Path</th>
-                  <th>Lock Type</th>
-                  <th>Client / Thread</th>
-                  <th>Acquired At</th>
-                </tr>
-              </thead>
-              <tbody id="activeLocksBody">
-                <tr><td colspan="4" class="text-center">No active locks held</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Waiting Queue & Deadlock Detector -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Wait-For Diagnostics &amp; Cycle Detector</h3>
-          </div>
-          <div class="card-body">
-            <div class="deadlock-alert" id="deadlockBanner">
-              <span class="status-badge badge-green">SAFE</span> No Deadlock Cycles Detected (Lock Hierarchy Enforced)
-            </div>
-            <div class="metrics-grid mt-3">
-              <div class="metric-box">
-                <span class="m-label">Active Locks:</span>
-                <span id="syncActiveCount" class="m-val">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Waiting Requests:</span>
-                <span id="syncWaitCount" class="m-val">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Timeouts Encountered:</span>
-                <span id="syncTimeouts" class="m-val text-amber">0</span>
-              </div>
-              <div class="metric-box">
-                <span class="m-label">Deadlocks Prevented:</span>
-                <span id="syncPrevented" class="m-val text-emerald">0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 6: Crash Recovery & WAL -->
-    <section id="tab-recovery" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Crash Recovery &amp; Write-Ahead Log (OS Module E)</h2>
-          <p class="section-desc">Durable operation logging, atomic two-phase updates, and automatic crash repair upon server restart.</p>
-        </div>
-        <button class="btn btn-primary" id="runRecoveryBtn">Trigger Recovery Check</button>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>Durable Write-Ahead Log (WAL) Journal Entries</h3>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>LSN</th>
-                <th>Transaction ID</th>
-                <th>Operation</th>
-                <th>Target File</th>
-                <th>State</th>
-                <th>Timestamp</th>
-              </tr>
-            </thead>
-            <tbody id="walTableBody">
-              <tr><td colspan="6" class="text-center">Loading WAL entries...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 7: Disk Seek Simulator -->
-    <section id="tab-disksim" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Disk Scheduling Simulation Demonstration (OS Module H)</h2>
-          <p class="section-desc">Interactive comparison of FCFS, SSTF, and SCAN (Elevator) seek distance metrics on synthetic cylinder requests.</p>
-        </div>
-      </div>
-
-      <div class="card mb-4">
-        <div class="card-header">
-          <h3>Run Disk Seek Simulation</h3>
-        </div>
-        <div class="card-body">
-          <form id="diskSimForm">
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Initial Head Position (Cylinder)</label>
-                <input type="number" id="diskStartCyl" value="53" min="0" max="199">
-              </div>
-              <div class="form-group flex-2">
-                <label>Request Queue (Cylinders separated by commas)</label>
-                <input type="text" id="diskRequests" value="98, 183, 37, 122, 14, 124, 65, 67">
-              </div>
-              <div class="form-group flex-1">
-                <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Run Comparison</button>
-              </div>
-            </div>
-          </form>
-          <div class="disclaimer-badge mt-2">
-            <strong>NOTE:</strong> Educational OS demonstration comparing head movement metrics. Does not alter the physical Windows disk controller.
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-3col" id="diskResultsGrid">
-        <!-- Injected via app.js -->
-      </div>
-    </section>
-
-    <!-- TAB 8: Security & Audit Trail -->
-    <section id="tab-audit" class="tab-pane">
-      <div class="section-header">
-        <div>
-          <h2>Security &amp; Audit Trail (OS Module I)</h2>
-          <p class="section-desc">Audit logging of all distributed file transactions, access control checks, and path traversal defenses.</p>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>Real-Time Audit Log Stream</h3>
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Target Path</th>
-                <th>Result</th>
-                <th>Client IP</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody id="auditTableBody">
-              <tr><td colspan="8" class="text-center">Loading audit log...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <script src="app.js"></script>
-</body>
-</html>
+﻿<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Linux OS Concepts Simulator</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"></head><body><header id="topbar"><div class="topbar-left"><span class="topbar-logo">&#9881;</span><span class="topbar-title">Linux OS Concepts Simulator</span><span class="topbar-sub">Advanced DFS &bull; C++20 &bull; Windows-Native</span></div><div class="topbar-right"><span class="status-pill" id="clusterPill"><span class="pulse-dot"></span><span id="clusterStatusLabel">CONNECTING</span></span><span class="topbar-stat">PID: <strong id="hdrPid">--</strong></span><span class="topbar-stat">Threads: <strong id="hdrThreads">--</strong></span></div></header><div class="layout"><nav id="sidebar"><div class="nav-group"><div class="nav-group-label">SYSTEM</div><a class="nav-item active" data-panel="overview">Overview</a><a class="nav-item" data-panel="cluster">Cluster Topology</a><a class="nav-item" data-panel="walkthrough" style="color:var(--accent-amber);font-weight:600">&#9654; DFS Walkthrough</a></div><div class="nav-group"><div class="nav-group-label">PROCESS MANAGEMENT</div><a class="nav-item" data-panel="procmgr">Process Manager</a><a class="nav-item" data-panel="cpusched">CPU Scheduler</a></div><div class="nav-group"><div class="nav-group-label">SYNCHRONIZATION</div><a class="nav-item" data-panel="locks">Lock Manager</a><a class="nav-item" data-panel="deadlock">Deadlock Playground</a><a class="nav-item" data-panel="banker">Bankers Algorithm</a></div><div class="nav-group"><div class="nav-group-label">MEMORY MANAGEMENT</div><a class="nav-item" data-panel="memory">Memory Simulator</a></div><div class="nav-group"><div class="nav-group-label">FILE SYSTEM AND IO</div><a class="nav-item" data-panel="files">File Explorer</a><a class="nav-item" data-panel="disk">Disk Scheduler</a><a class="nav-item" data-panel="iobuffer">IO Buffer and Cache</a></div><div class="nav-group"><div class="nav-group-label">SYSTEM INTERNALS</div><a class="nav-item" data-panel="wal">WAL and Recovery</a><a class="nav-item" data-panel="syscall">System Calls</a><a class="nav-item" data-panel="terminal">Linux Terminal</a><a class="nav-item" data-panel="audit">Audit Log</a></div></nav><main id="main"><section id="panel-overview" class="panel active"><div class="panel-header"><h2>System Overview</h2><span class="panel-desc">Live cluster status and OS subsystem health</span></div><div class="wt-launch-banner">
+  <div class="wt-launch-icon">&#9654;</div>
+  <div>
+    <div class="wt-launch-title">Guided DFS Walkthrough</div>
+    <div class="wt-launch-desc">Follow the complete lifecycle of a 10 MB PDF upload through every OS concept layer — from process creation to WAL commit.</div>
+  </div>
+  <button class="btn btn-success" onclick="document.querySelector('[data-panel=walkthrough]').click()">Launch Walkthrough &#9654;</button>
+</div>
+<div class="kpi-row"><div class="kpi-card"><div class="kpi-icon cyan">PID</div><div><div class="kpi-val" id="ovCoordPid">--</div><div class="kpi-label">Coordinator PID</div></div></div><div class="kpi-card"><div class="kpi-icon blue">THR</div><div><div class="kpi-val" id="ovThreads">--</div><div class="kpi-label">Active Threads</div></div></div><div class="kpi-card"><div class="kpi-icon green">NOD</div><div><div class="kpi-val" id="ovNodes">--</div><div class="kpi-label">Nodes Online</div></div></div><div class="kpi-card"><div class="kpi-icon amber">LCK</div><div><div class="kpi-val" id="ovLocks">--</div><div class="kpi-label">Active Locks</div></div></div><div class="kpi-card"><div class="kpi-icon purple">HIT</div><div><div class="kpi-val" id="ovCache">--%</div><div class="kpi-label">Cache Hit Ratio</div></div></div><div class="kpi-card"><div class="kpi-icon red">BUF</div><div><div class="kpi-val" id="ovBuffer">--%</div><div class="kpi-label">Buffer Occupancy</div></div></div></div><div class="grid-2 mt"><div class="card"><div class="card-title">Cluster Topology</div><svg id="topoSvg" width="100%" height="220"></svg></div><div class="card"><div class="card-title">Recent System Events</div><div id="ovEventLog" class="event-log"></div></div></div></section><section id="panel-cluster" class="panel"><div class="panel-header"><h2>Storage Node Cluster</h2><span class="panel-desc">Win32 CreateProcess lifecycle &bull; Winsock2 TCP &bull; Fault simulation</span></div><div class="nodes-grid" id="nodesGrid"></div><div class="card mt"><div class="card-title">Fault Tolerance Architecture</div><div class="arch-steps"><div class="arch-step"><div class="step-n">1</div><div><strong>Replication</strong><br>Files split into 64KB chunks replicated across Win32 CreateProcess instances.</div></div><div class="arch-step"><div class="step-n">2</div><div><strong>Heartbeat Detection</strong><br>Nodes send TCP heartbeats. Missing heartbeat for 5s marks node OFFLINE.</div></div><div class="arch-step"><div class="step-n">3</div><div><strong>Transparent Failover</strong><br>Downloads skip OFFLINE replicas and fetch from surviving nodes automatically.</div></div><div class="arch-step"><div class="step-n">4</div><div><strong>Auto Re-Replication</strong><br>Background monitor restores replication factor by copying chunks to healthy nodes.</div></div></div></div></section><section id="panel-procmgr" class="panel"><div class="panel-header"><h2>Process Manager</h2><span class="panel-desc">Linux process concepts &bull; PCB viewer &bull; READY / RUNNING / WAITING / TERMINATED states</span></div><div class="toolbar"><button class="btn btn-primary" onclick="ProcMgr.openCreateForm()">+ Create Process</button><span class="disclaimer-inline">SIMULATION &mdash; Linux: fork()+exec() | Windows: CreateProcess()</span></div><div id="procCreateForm" class="inline-form hidden"><div class="form-row"><div class="form-group"><label>Name</label><input id="pName" type="text" value="proc_A" style="width:100px"></div><div class="form-group"><label>Arrival</label><input id="pArrival" type="number" value="0" min="0" style="width:70px"></div><div class="form-group"><label>Burst</label><input id="pBurst" type="number" value="5" min="1" style="width:70px"></div><div class="form-group"><label>Priority (1=high)</label><input id="pPriority" type="number" value="5" min="1" max="10" style="width:70px"></div><div class="form-group"><label>PPID</label><input id="pPPID" type="number" value="1" min="0" style="width:70px"></div><div class="form-group align-bottom"><button class="btn btn-success" onclick="ProcMgr.createProcess()">Add</button>&nbsp;<button class="btn" onclick="ProcMgr.closeCreateForm()">Cancel</button></div></div></div><div class="table-wrap mt"><table class="data-table"><thead><tr><th>PID</th><th>PPID</th><th>Name</th><th>State</th><th>Priority</th><th>Burst</th><th>Arrival</th><th>Actions</th></tr></thead><tbody id="procTableBody"></tbody></table></div><div class="grid-2 mt"><div class="card"><div class="card-title">Process Control Block (PCB)</div><div id="pcbViewer" class="pcb-viewer"><div class="empty-hint">Click a process row to inspect its PCB</div></div></div><div class="card"><div class="card-title">Process Tree (Parent to Child)</div><svg id="procTreeSvg" width="100%" height="200"></svg></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">The coordinator runs as a Win32 process. Each storage node is a separate process launched by <code>ProcessManager::launchStorageNode()</code> via <code>CreateProcessW()</code> in <code>src/process/process_manager.cpp</code>. Within the coordinator, four <code>std::thread</code> instances run concurrently — HTTP server, RPC server, worker scheduling loop, and health monitor. Process state (PID, memory, handle) is tracked in the <code>ProcessState</code> struct and monitored using <code>GetProcessMemoryInfo()</code> via PSAPI. Clicking "Simulate Crash" above calls <code>TerminateProcess()</code>; the health monitor detects the missing heartbeat in under 5 seconds and marks the node OFFLINE in SQLite.</p></div>
+</div>
+</section>
+<section id="panel-cpusched" class="panel"><div class="panel-header"><h2>CPU Scheduling Simulator</h2><span class="panel-desc">FCFS &bull; SJF &bull; SRTF &bull; Round Robin &bull; Priority NP/P &bull; Animated Gantt chart</span></div><div class="grid-2"><div class="card"><div class="card-title">Process Input<span style="float:right"><button class="btn btn-sm" onclick="CpuSched.loadSample()">Load Sample</button>&nbsp;<button class="btn btn-sm btn-primary" onclick="CpuSched.openAddForm()">+ Add</button></span></div><div id="csAddForm" class="inline-form hidden"><div class="form-row"><div class="form-group"><label>Name</label><input id="csName" value="P1" style="width:55px"></div><div class="form-group"><label>Arrival</label><input id="csArrival" type="number" value="0" min="0" style="width:55px"></div><div class="form-group"><label>Burst</label><input id="csBurst" type="number" value="5" min="1" style="width:55px"></div><div class="form-group"><label>Priority</label><input id="csPriority" type="number" value="3" min="1" max="10" style="width:55px"></div><div class="form-group align-bottom"><button class="btn btn-success btn-sm" onclick="CpuSched.addProcess()">Add</button></div></div></div><div class="table-wrap" style="max-height:180px"><table class="data-table"><thead><tr><th>Name</th><th>Arrival</th><th>Burst</th><th>Priority</th><th></th></tr></thead><tbody id="csInputBody"></tbody></table></div></div><div class="card"><div class="card-title">Algorithm &amp; Controls</div><div class="algo-btns" id="csAlgoBtns"><button class="algo-btn active" data-algo="FCFS">FCFS</button><button class="algo-btn" data-algo="SJF">SJF</button><button class="algo-btn" data-algo="SRTF">SRTF</button><button class="algo-btn" data-algo="RR">Round Robin</button><button class="algo-btn" data-algo="PRI_NP">Priority NP</button><button class="algo-btn" data-algo="PRI_P">Priority P</button></div><div class="form-row mt"><div class="form-group"><label>Time Quantum (RR)</label><input id="csQuantum" type="number" value="2" min="1" max="20" style="width:55px"></div></div><div class="ctrl-row mt"><button class="btn btn-success btn-sm" onclick="CpuSched.run()">&#9654; Run</button><button class="btn btn-sm" onclick="CpuSched.stepBack()">&lt;&lt;</button><button class="btn btn-sm" onclick="CpuSched.stepForward()">&gt;&gt;</button><button class="btn btn-sm" id="csPlayBtn" onclick="CpuSched.togglePlay()">&#9654; Play</button><button class="btn btn-sm" onclick="CpuSched.reset()">&#8635; Reset</button><label style="font-size:11px;margin-left:6px">Speed:<input id="csSpeed" type="range" min="1" max="8" value="4" style="width:60px;vertical-align:middle"> <span id="csSpeedLabel">1x</span></label></div></div></div><div class="card mt"><div class="card-title">Gantt Chart <span id="csTimeLabel" class="mono" style="float:right;color:var(--accent-cyan)">Time: 0</span></div><div class="gantt-wrap"><canvas id="ganttCanvas" height="90"></canvas></div><div class="gantt-timeline" id="ganttTimeline"></div></div><div class="card mt"><div class="card-title">Queue State</div><div class="queue-state-row"><div class="qs-col"><div class="qs-label">RUNNING</div><div id="csRunning" class="qs-running">--</div></div><div class="qs-col"><div class="qs-label">READY QUEUE</div><div id="csReadyQueue" class="qs-queue"></div></div><div class="qs-col"><div class="qs-label">WAITING</div><div id="csWaiting" class="qs-queue"></div></div><div class="qs-col"><div class="qs-label">COMPLETED</div><div id="csCompleted" class="qs-queue"></div></div></div><div class="explanation-box" id="csExplanation">Run a simulation to see step-by-step explanations.</div></div><div id="csResultsSection" class="hidden"><div class="card mt"><div class="card-title">Performance Metrics</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Start</th><th>Finish</th><th>Waiting</th><th>Turnaround</th><th>Response</th></tr></thead><tbody id="csMetricsBody"></tbody></table></div></div><div class="card mt"><div class="card-title">Algorithm Comparison<button class="btn btn-sm" style="float:right" onclick="CpuSched.compareAll()">Compare All</button></div><div id="csCompare"></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-blue">MIXED</span><p class="dfs-para">The Windows OS schedules the coordinator and storage-node processes as standard Win32 processes — CPU time is allocated by the OS kernel, not the DFS. Internally, the DFS has its own application-level <code>RequestScheduler</code> (<code>src/scheduler/request_scheduler.cpp</code>) that queues file I/O requests (upload, download, delete) using FCFS, Priority with aging (+1 boost per 200ms waited), or Round Robin with a 50ms quantum. This request scheduler controls the <em>order</em> in which file operations are serviced — it is distinct from OS CPU burst scheduling shown in the Gantt chart above. When two clients upload simultaneously, both requests enter the queue and are dequeued by <code>Coordinator::workerSchedulingLoop()</code> according to the selected algorithm.</p></div>
+</div>
+</section>
+<section id="panel-locks" class="panel"><div class="panel-header"><h2>Lock Manager</h2><span class="panel-desc">Reader-Writer Locks &bull; Wait-For Graph &bull; Havender Deadlock Prevention</span></div><div id="dlBanner" class="dl-banner safe"><strong>SAFE</strong> &mdash; No deadlock cycles detected.</div><div class="kpi-row mt"><div class="kpi-card"><div class="kpi-val" id="lkActive">0</div><div class="kpi-label">Active Locks</div></div><div class="kpi-card"><div class="kpi-val" id="lkWaiting">0</div><div class="kpi-label">Waiting</div></div><div class="kpi-card"><div class="kpi-val" id="lkAcquired">0</div><div class="kpi-label">Total Acquired</div></div><div class="kpi-card"><div class="kpi-val text-amber" id="lkTimeouts">0</div><div class="kpi-label">Timeouts</div></div><div class="kpi-card"><div class="kpi-val text-green" id="lkPrevented">0</div><div class="kpi-label">Deadlocks Prevented</div></div></div><div class="grid-2 mt"><div class="card"><div class="card-title">Active Locks</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Resource</th><th>Type</th><th>Client</th><th>Acquired At</th></tr></thead><tbody id="lkActiveBody"></tbody></table></div></div><div class="card"><div class="card-title">Waiting Requests</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Resource</th><th>Type</th><th>Client</th><th>Timeout</th></tr></thead><tbody id="lkWaitBody"></tbody></table></div></div></div><div class="card mt"><div class="card-title">Concept: Reader-Writer Locks &amp; Deadlock Prevention</div><div class="concept-box"><p><strong>Reader-Writer Locks</strong> allow multiple concurrent SHARED_READ holders but require exclusive access for EXCLUSIVE_WRITE.</p><p><strong>Havender Lock Ordering:</strong> Locks are always acquired in lexicographic sorted order, eliminating Circular Wait without rollback.</p><p><strong>Wait-For Graph:</strong> Edge A&rarr;B means A waits for a resource held by B. A cycle proves deadlock. DFS-based cycle detection runs on every lock request.</p></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">Every file upload acquires an <code>EXCLUSIVE_WRITE</code> lock on the target path; every download acquires a <code>SHARED_READ</code> lock. Multiple readers can hold the lock simultaneously, but a writer waits until all readers release. This is implemented in <code>LockManager</code> (<code>src/sync/lock_manager.cpp</code>) using <code>std::mutex</code> and <code>std::condition_variable</code>. Rename operations acquire locks on both paths in alphabetical order — Havender's ordering — which eliminates circular wait. Lock acquisition has a 3–5 second timeout; on expiry the operation fails and the WAL transaction is aborted. <code>detectDeadlockCycle()</code> builds a Wait-For Graph after every acquisition as a safety net. The "Active Locks" table above reflects the live state from <code>/api/locks</code>.</p></div>
+</div>
+</section>
+<section id="panel-deadlock" class="panel"><div class="panel-header"><h2>Deadlock Playground</h2><span class="panel-desc">Build Resource Allocation Graphs &bull; Detect cycles &bull; Simulate recovery</span></div><div class="toolbar"><button class="btn btn-primary" onclick="DLPg.addProcess()">+ Process</button><button class="btn btn-primary" onclick="DLPg.addResource()">+ Resource</button><button class="btn" onclick="DLPg.openEdgeForm()">+ Edge</button><button class="btn btn-danger" onclick="DLPg.detectDeadlock()">&#128269; Detect Deadlock</button><button class="btn" onclick="DLPg.loadPreset('deadlock')">Preset: Deadlock</button><button class="btn" onclick="DLPg.loadPreset('safe')">Preset: Safe</button><button class="btn" onclick="DLPg.clearAll()">Clear</button></div><div id="dlEdgeForm" class="inline-form hidden"><div class="form-row"><div class="form-group"><label>Type</label><select id="dlEdgeType"><option value="alloc">Allocation (R to P)</option><option value="req">Request (P to R)</option></select></div><div class="form-group"><label>Process</label><select id="dlEdgeProc"></select></div><div class="form-group"><label>Resource</label><select id="dlEdgeRes"></select></div><div class="form-group"><label>Instances</label><input id="dlEdgeInst" type="number" value="1" min="1" style="width:55px"></div><div class="form-group align-bottom"><button class="btn btn-success btn-sm" onclick="DLPg.addEdge()">Add</button>&nbsp;<button class="btn btn-sm" onclick="DLPg.closeEdgeForm()">Cancel</button></div></div></div><div class="grid-2 mt"><div class="card"><div class="card-title">Resource Allocation Graph</div><svg id="ragSvg" width="100%" height="360"></svg><div id="dlResult"></div></div><div class="card"><div class="card-title">Graph State</div><div class="grid-2"><div><div class="card-subtitle">Processes</div><div id="dlProcessList" class="node-list"></div></div><div><div class="card-subtitle">Resources</div><div id="dlResourceList" class="node-list"></div></div></div><div class="card-subtitle mt">Edges</div><div id="dlEdgeList" class="edge-list"></div><div class="mt"><div class="card-subtitle">Recovery: Terminate Process</div><div class="form-row" style="margin-top:6px"><select id="dlRecoverProc" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:12px"></select>&nbsp;<button class="btn btn-sm btn-danger" onclick="DLPg.recoverTerminate()">Terminate</button></div></div><div class="concept-box mt" style="font-size:12px"><p><strong>Four Necessary Conditions:</strong> Mutual Exclusion, Hold and Wait, No Preemption, Circular Wait. Eliminating any one prevents deadlock.</p></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">Our DFS prevents deadlock using Havender's lock ordering in <code>LockManager::acquireMultipleLocks()</code> — locks are always acquired in lexicographic order, eliminating circular wait before it can form. If a lock still cannot be acquired within 5 seconds, the call returns false and the transaction is aborted (recovery without deadlock). <code>detectDeadlockCycle()</code> additionally builds a Wait-For Graph and runs DFS cycle detection as a detection layer. The RAG playground above lets you construct equivalent scenarios manually — for example, two rename operations crossing the same two paths — to see how the circular-wait condition forms and how ordering prevents it.</p></div>
+</div>
+</section>
+<section id="panel-banker" class="panel"><div class="panel-header"><h2>Bankers Algorithm</h2><span class="panel-desc">Deadlock Avoidance &bull; Safety Algorithm step-by-step &bull; Resource Request Simulation</span></div><div class="toolbar"><label>Processes:<input id="bkNumProc" type="number" value="5" min="2" max="8" style="width:50px;margin-left:6px"></label><label style="margin-left:10px">Resource Types:<input id="bkNumRes" type="number" value="3" min="1" max="5" style="width:50px;margin-left:6px"></label><button class="btn btn-primary btn-sm" onclick="Banker.buildTables()">Build Tables</button><button class="btn btn-sm" onclick="Banker.loadExample()">Load Classic Example</button></div><div id="bkTables" class="grid-3 mt"></div><div class="card mt"><div class="card-title">Available Resources</div><div id="bkAvailable" class="available-row"></div></div><div class="card mt"><div class="card-title">Need Matrix (Max minus Allocation)</div><div id="bkNeedTable"></div></div><div class="toolbar mt"><button class="btn btn-success" onclick="Banker.runSafety()">&#9654; Run Safety Check</button><button class="btn" onclick="Banker.stepForward()">&#9654;&#9654; Step</button><button class="btn" onclick="Banker.resetSafety()">&#8635; Reset</button></div><div class="card mt"><div class="card-title">Safety Algorithm Steps</div><div id="bkSafetyLog" class="safety-log"></div><div id="bkSafetyResult" class="safety-result hidden"></div></div><div class="card mt"><div class="card-title">Resource Request Simulation</div><div class="form-row"><div class="form-group"><label>Process</label><select id="bkReqProc" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:12px"></select></div><div class="form-group"><label>Request Vector (e.g. 1,0,2)</label><input id="bkReqVec" type="text" placeholder="1,0,2" style="width:120px"></div><div class="form-group align-bottom"><button class="btn btn-primary btn-sm" onclick="Banker.requestResources()">Request</button></div></div><div id="bkReqResult" class="explanation-box mt hidden"></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-amber">EDUCATIONAL</span><p class="dfs-para">Our DFS does not implement Banker's Algorithm. Banker's requires each client to declare maximum resource needs in advance, which is impractical for a dynamic file system with unpredictable concurrent clients. The DFS achieves the same safety goals through lock ordering (prevention) and WFG cycle detection (detection) in <code>src/sync/lock_manager.cpp</code>. The matrix simulation above is an educational demonstration of the safety algorithm theory. It is directly relevant to OS resource management and provides the conceptual foundation for understanding why safe-state analysis matters in systems with multiple shared resources.</p></div>
+</div>
+</section>
+<section id="panel-memory" class="panel"><div class="panel-header"><h2>Memory Management Simulator</h2><span class="panel-desc">Partitioning &bull; Paging &bull; Page Replacement &bull; Virtual Address Translation</span></div><div class="sub-tabs"><button class="sub-tab active" data-mem="partition">Partitioning</button><button class="sub-tab" data-mem="paging">Paging</button><button class="sub-tab" data-mem="pagerep">Page Replacement</button></div><div class="disclaimer-bar">EDUCATIONAL SIMULATION &mdash; Not actual Windows or Linux kernel memory operations.</div><div id="memPartition" class="mem-sub active"><div class="toolbar mt"><label>Total Memory (KB):<input id="memTotal" type="number" value="1024" min="128" max="4096" style="width:70px;margin-left:6px"></label><label style="margin-left:10px">Mode:<select id="memMode" style="margin-left:6px"><option value="variable">Variable</option><option value="fixed">Fixed</option></select></label><label style="margin-left:10px">Algorithm:<select id="memAlgo" style="margin-left:6px"><option value="firstfit">First Fit</option><option value="bestfit">Best Fit</option><option value="worstfit">Worst Fit</option></select></label><button class="btn btn-sm btn-primary" onclick="MemSim.initMemory()">Initialize</button></div><div id="fixedPartConfig" class="inline-form hidden mt"><label>Partition Sizes (KB comma-separated):<input id="fixedPartSizes" type="text" value="256,256,256,256" style="width:200px;margin-left:8px"></label></div><div class="card mt"><div class="card-title">Memory Block Visualizer</div><div id="memVisual" class="mem-visual"></div><div class="mem-stats" id="memStats"></div></div><div class="toolbar mt"><label>Process:<input id="mpName" type="text" value="P1" style="width:55px;margin-left:6px"></label><label style="margin-left:10px">Size (KB):<input id="mpSize" type="number" value="200" min="1" style="width:65px;margin-left:6px"></label><button class="btn btn-success btn-sm" onclick="MemSim.allocate()">Allocate</button><button class="btn btn-sm" onclick="MemSim.compact()">Compact</button></div><div id="mpResult" class="explanation-box mt hidden"></div></div><div id="memPaging" class="mem-sub"><div class="toolbar mt"><label>Physical Frames:<input id="pgFrames" type="number" value="16" min="4" max="64" style="width:55px;margin-left:6px"></label><label style="margin-left:10px">Page Size:<select id="pgPageSize" style="margin-left:6px"><option value="4">4 KB</option><option value="8">8 KB</option><option value="16">16 KB</option></select></label><button class="btn btn-sm btn-primary" onclick="PageSim.init()">Initialize</button></div><div class="toolbar mt"><label>Process:<input id="pgProcName" type="text" value="ProcA" style="width:70px;margin-left:6px"></label><label style="margin-left:10px">Size (KB):<input id="pgProcSize" type="number" value="20" min="1" style="width:65px;margin-left:6px"></label><button class="btn btn-success btn-sm" onclick="PageSim.loadProcess()">Load Process</button></div><div class="grid-2 mt"><div class="card"><div class="card-title">Physical Memory Frames</div><div id="pgFrameGrid" class="frame-grid"></div></div><div class="card"><div class="card-title">Page Table</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Page</th><th>Frame</th><th>Process</th><th>Valid</th></tr></thead><tbody id="pgPageTableBody"></tbody></table></div></div></div><div class="card mt"><div class="card-title">Virtual Address Translator</div><div class="form-row"><div class="form-group"><label>Virtual Address (decimal)</label><input id="pgVirtAddr" type="number" value="0" min="0" style="width:100px"></div><div class="form-group"><label>Process</label><select id="pgTransProc" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:12px"></select></div><div class="form-group align-bottom"><button class="btn btn-primary btn-sm" onclick="PageSim.translate()">Translate</button></div></div><div id="pgTransResult" class="explanation-box mt hidden"></div></div></div><div id="memPagerep" class="mem-sub"><div class="toolbar mt"><label>Frames:<input id="prFrames" type="number" value="3" min="2" max="7" style="width:50px;margin-left:6px"></label><label style="margin-left:10px">Reference String:<input id="prRefStr" type="text" value="7,0,1,2,0,3,0,4,2,3,0,3,0,3,2,1,2,0,1,7" style="width:290px;margin-left:6px"></label><button class="btn btn-sm" onclick="PageReplace.loadBelady()">Belady Demo</button></div><div class="algo-btns mt"><button class="algo-btn active" data-pr="FIFO">FIFO</button><button class="algo-btn" data-pr="LRU">LRU</button><button class="algo-btn" data-pr="OPT">Optimal</button></div><div class="ctrl-row mt"><button class="btn btn-success btn-sm" onclick="PageReplace.run()">&#9654; Run</button><button class="btn btn-sm" onclick="PageReplace.stepForward()">&#9654;&#9654; Step</button><button class="btn btn-sm" id="prPlayBtn" onclick="PageReplace.togglePlay()">&#9654; Play</button><button class="btn btn-sm" onclick="PageReplace.reset()">&#8635; Reset</button><button class="btn btn-sm" onclick="PageReplace.compareAll()">Compare All</button></div><div class="card mt"><div class="card-title">Step-by-Step Table <span id="prStats" style="float:right;font-size:12px;color:var(--accent-cyan)"></span></div><div class="table-wrap pr-table-wrap"><table class="data-table" id="prTable"><thead id="prHead"></thead><tbody id="prBody"></tbody></table></div></div><div id="prCompareResult" class="card mt hidden"><div class="card-title">Algorithm Comparison</div><div id="prCompareBody"></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">During upload, the coordinator splits file data into 64KB <code>MemoryChunk</code> objects and pushes them into a 16-slot <code>BoundedBuffer</code> (<code>include/buffer/bounded_buffer.h</code>). If all 16 slots are full, <code>push()</code> blocks the upload thread via <code>cv_not_full_.wait_for()</code> until the TCP sender frees a slot — this is backpressure. On download, the reassembled file is stored in <code>LruFileCache</code> (<code>include/cache/lru_cache.h</code>) — a 64-item doubly-linked-list + hashmap structure. A cache hit returns data without a TCP round-trip to storage nodes. The OS manages virtual memory pages for all of this via Windows VirtualAlloc transparently. The DFS does not implement paging, page tables, or partition allocation algorithms itself.</p></div>
+</div>
+</section>
+<section id="panel-files" class="panel"><div class="panel-header"><h2>Distributed File Explorer</h2><span class="panel-desc">SQLite metadata &bull; SHA-256 integrity &bull; Chunk replication &bull; Version history</span></div><div class="toolbar"><button class="btn btn-primary" onclick="FileMgr.openUpload()">&#8593; Upload File</button><button class="btn" onclick="FileMgr.loadFiles()">&#8635; Refresh</button><input id="fileSearch" type="text" class="search-input" placeholder="Filter files..." oninput="FileMgr.renderFiles(this.value)"></div><div id="fileUploadForm" class="inline-form hidden"><div class="form-row"><div class="form-group" style="flex:2"><label>DFS Path</label><input id="upPath" type="text" value="/docs/file.txt"></div><div class="form-group"><label>Replication</label><select id="upRepl"><option value="2">2 Replicas</option><option value="3">3 Replicas</option><option value="1">1 Replica</option></select></div><div class="form-group"><label>Owner</label><input id="upOwner" type="text" value="admin" style="width:75px"></div></div><div class="form-group"><label>Content</label><textarea id="upContent" rows="3" placeholder="File content..."></textarea></div><div class="form-row"><button class="btn btn-success" onclick="FileMgr.upload()">Upload</button>&nbsp;<button class="btn" onclick="FileMgr.closeUpload()">Cancel</button></div></div><div class="table-wrap mt"><table class="data-table"><thead><tr><th>Path</th><th>Perms</th><th>Size</th><th>Owner</th><th>Ver</th><th>SHA-256</th><th>Replicas</th><th>Actions</th></tr></thead><tbody id="filesBody"></tbody></table></div><div id="verPanel" class="card mt hidden"><div class="card-title">Version History: <span id="verPath" class="mono"></span><button class="btn btn-sm" style="float:right" onclick="FileMgr.closeVersions()">Close</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Version</th><th>Size</th><th>SHA-256</th><th>Created</th><th>By</th><th>Action</th></tr></thead><tbody id="verBody"></tbody></table></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">A file in our DFS is stored as a sequence of 64KB chunks, each with a unique ID (<code>{file_id}_chk_{index}</code>) and a SHA-256 hash. The <code>MetadataManager</code> (<code>src/metadata/metadata_manager.cpp</code>) stores the complete record in SQLite: path, owner, Unix-style permissions (e.g. 0755), version, size, SHA-256, and the full chunk-to-node mapping. On download, the coordinator fetches each chunk from a healthy replica node and verifies its hash before assembling the response. Uploading report.pdf (10MB) creates 160 chunks, each replicated to 2 nodes — so 320 total chunk writes across the cluster. If Node 1 goes offline, its chunks are transparently read from Node 2.</p></div>
+</div>
+</section>
+<section id="panel-disk" class="panel"><div class="panel-header"><h2>Disk Scheduling Simulator</h2><span class="panel-desc">FCFS &bull; SSTF &bull; SCAN &bull; C-SCAN &bull; LOOK &bull; C-LOOK &bull; Animated head movement</span></div><div class="disclaimer-bar">EDUCATIONAL SIMULATION &mdash; Does not affect the physical Windows disk controller.</div><div class="card mt"><div class="form-row"><div class="form-group"><label>Start Cylinder</label><input id="dkStart" type="number" value="53" min="0" style="width:70px"></div><div class="form-group" style="flex:2"><label>Request Queue (comma-separated)</label><input id="dkRequests" type="text" value="98,183,37,122,14,124,65,67"></div><div class="form-group"><label>Max Cylinder</label><input id="dkMax" type="number" value="199" min="50" style="width:70px"></div><div class="form-group"><label>Direction</label><select id="dkDir"><option value="up">Moving Up</option><option value="down">Moving Down</option></select></div></div><div class="algo-btns mt"><button class="algo-btn active" data-dk="FCFS">FCFS</button><button class="algo-btn" data-dk="SSTF">SSTF</button><button class="algo-btn" data-dk="SCAN">SCAN</button><button class="algo-btn" data-dk="CSCAN">C-SCAN</button><button class="algo-btn" data-dk="LOOK">LOOK</button><button class="algo-btn" data-dk="CLOOK">C-LOOK</button></div><div class="ctrl-row mt"><button class="btn btn-success btn-sm" onclick="DiskSim.run()">&#9654; Run</button><button class="btn btn-sm" onclick="DiskSim.stepForward()">&#9654;&#9654; Step</button><button class="btn btn-sm" id="dkPlayBtn" onclick="DiskSim.togglePlay()">&#9654; Play</button><button class="btn btn-sm" onclick="DiskSim.reset()">&#8635; Reset</button><button class="btn btn-sm" onclick="DiskSim.compareAll()">Compare All</button></div></div><div class="grid-2 mt"><div class="card"><div class="card-title">Head Movement Animation <span id="dkCurrentLabel" style="float:right;color:var(--accent-cyan);font-size:11px"></span></div><canvas id="diskCanvas" width="320" height="400"></canvas></div><div class="card"><div class="card-title">Results</div><div id="dkStats" class="kpi-row" style="flex-wrap:wrap;gap:8px"></div><div class="card-subtitle mt">Service Order</div><div id="dkSequence" class="mono" style="color:var(--text-secondary);font-size:12px;line-height:2;word-break:break-all"></div><div class="card-subtitle mt">Algorithm Explanation</div><div id="dkExplain" class="explanation-box"></div><div id="dkCompare" class="mt"></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-blue">MIXED</span><p class="dfs-para">Storage nodes write chunk data to local directories (<code>storage/node1/</code>, <code>storage/node2/</code>) using <code>std::fstream</code>, which maps to <code>CreateFile()</code>/<code>WriteFile()</code> on Windows. Actual disk head scheduling is handled by the Windows NTFS driver and disk controller — outside DFS control. The backend <code>DiskSchedulerSimulator</code> (<code>src/disk/disk_scheduler.cpp</code>) implements FCFS, SSTF, and SCAN for comparison via <code>/api/disk_sim</code>. The simulator above extends this with C-SCAN, LOOK, and C-LOOK. When multiple clients request chunks from the same node simultaneously, SSTF ordering would minimize total head movement — the simulator lets you verify this by entering the cylinder positions of concurrent chunk requests.</p></div>
+</div>
+</section>
+<section id="panel-iobuffer" class="panel"><div class="panel-header"><h2>I/O Buffer &amp; Cache</h2><span class="panel-desc">Bounded producer-consumer buffer &bull; LRU cache &bull; Real-time metrics</span></div><div class="grid-2"><div class="card"><div class="card-title">Bounded Ring Buffer (16 slots)</div><div class="ring-wrap"><div id="ringBuf" class="ring-buf"></div></div><div class="buf-stats mt" id="bufStats"></div><div class="concept-box mt"><p>16-slot circular FIFO holding 64KB file chunks. <strong>Backpressure:</strong> when full, the producer blocks on a condition variable until a consumer drains a slot. Linux equivalent: pipe() with kernel buffer limits.</p></div></div><div class="card"><div class="card-title">LRU File Cache<button class="btn btn-sm" style="float:right" onclick="DashAPI.clearCache()">Clear</button></div><div class="cache-stats" id="cacheStatsRow"></div><div class="lru-chain-label mt">LRU Chain (MRU to LRU):</div><div id="lruChain" class="lru-chain"></div><div class="concept-box mt"><p>On HIT data is returned from memory. On MISS data is fetched from nodes and inserted at MRU position. On write/delete the entry is invalidated to maintain cache coherence. Linux equivalent: page cache in VFS layer.</p></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">The bounded buffer is a 16-slot ring of <code>MemoryChunk</code> objects (<code>BoundedBuffer&lt;MemoryChunk&gt;</code>). During upload, the upload thread is the producer; a background TCP sender is the consumer. When all 16 slots are occupied, the producer blocks on <code>cv_not_full_.wait_for()</code>. When a slot frees, it is notified and continues. Uploading a 1MB file produces exactly 16 chunks — the buffer fills completely, so chunk 17 would block until chunk 0 is sent and its slot freed. The LRU cache sits above this: a cache hit on download skips the buffer entirely and returns data from memory. The ring and cache statistics above are fetched live from <code>/api/buffer</code> and <code>/api/cache</code>.</p></div>
+</div>
+</section>
+<section id="panel-wal" class="panel"><div class="panel-header"><h2>Write-Ahead Log &amp; Crash Recovery</h2><span class="panel-desc">ACID transactions &bull; LSN journal &bull; Automatic rollback on crash</span></div><div class="toolbar"><button class="btn btn-primary" onclick="DashAPI.runRecovery()">&#128270; Run Recovery Scan</button></div><div class="card mt"><div class="card-title">WAL Journal</div><div class="table-wrap"><table class="data-table"><thead><tr><th>LSN</th><th>TX ID</th><th>Operation</th><th>File Path</th><th>State</th><th>Timestamp</th></tr></thead><tbody id="walBody"></tbody></table></div></div><div class="card mt"><div class="card-title">WAL Lifecycle</div><div class="concept-box"><p><strong>Write-Ahead Logging:</strong> Before any data modification the operation is appended to a durable log with a Log Sequence Number (LSN). States: PENDING then COMMITTED or ROLLED_BACK.</p><p><strong>Crash Recovery:</strong> On coordinator startup the WAL manager scans for PENDING entries and rolls them back, ensuring atomicity. Linux equivalent: journald in ext4/XFS filesystems.</p></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para">Every file operation is wrapped in a WAL transaction. <code>WalManager::beginTransaction()</code> writes a PENDING entry to SQLite with an LSN before any data moves. After all chunks are stored on nodes, <code>commitTransaction()</code> marks it COMMITTED. If the coordinator crashes between those two steps — after chunk storage but before the commit — <code>runCrashRecovery()</code> finds the PENDING entry on restart and calls <code>abortTransaction()</code>, removing partial metadata. The upload appears as if it never happened. This is the same principle used by ext4 journal and NTFS transaction logs. All entries shown above are live from <code>/api/recovery</code>.</p></div>
+</div>
+</section>
+<section id="panel-syscall" class="panel"><div class="panel-header"><h2>System Call Simulator</h2><span class="panel-desc">Linux syscall interface &bull; User space to Kernel space path animation</span></div><div class="disclaimer-bar">EDUCATIONAL SIMULATION &mdash; These are NOT real Linux system calls executing on Windows. This demonstrates the syscall interface concept.</div><div class="grid-2 mt"><div class="card"><div class="card-title">Select a System Call</div><div class="syscall-list" id="syscallList"></div></div><div class="card"><div class="card-title">Execution Path Animation</div><div id="syscallPath" class="syscall-path"><div class="sp-layer" id="sp0">User Application (Ring 3)</div><div class="sp-arrow" id="spa0">&#8595; syscall instruction (int 0x80 / syscall opcode)</div><div class="sp-layer" id="sp1">System Call Interface &mdash; syscall dispatch table</div><div class="sp-arrow" id="spa1">&#8595; kernel mode switch (ring 3 to ring 0)</div><div class="sp-layer" id="sp2">Kernel Subsystem</div><div class="sp-arrow" id="spa2">&#8595; return value via register rax</div><div class="sp-layer" id="sp3">Result / Return Value</div></div><div id="syscallDetail" class="explanation-box mt hidden"></div></div></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-amber">EDUCATIONAL</span><p class="dfs-para">Our DFS is Windows-native and uses Win32 API calls, not Linux system calls. The concepts map directly: <code>CreateProcessW</code> ≡ fork+exec, <code>CreateFile/ReadFile/WriteFile</code> ≡ open/read/write, <code>WSASend/WSARecv</code> ≡ write/read on a socket fd, <code>VirtualAlloc</code> ≡ mmap. The animation above shows the Linux ring 3→ring 0 privilege transition and syscall dispatch table — this is the architectural model that Win32 API calls follow through the Windows NTAPI layer. When the coordinator calls <code>send()</code> to transfer a chunk to a storage node, it crosses from user space into the Windows kernel exactly as shown, just via the Windows syscall mechanism rather than Linux int 0x80.</p></div>
+</div>
+</section>
+<section id="panel-terminal" class="panel"><div class="panel-header"><h2>Linux Terminal Simulator</h2><span class="panel-desc">Interactive shell connected to simulation state</span></div><div class="disclaimer-bar">SIMULATION SHELL &mdash; Commands interact with DFS and simulation state, not a real Linux kernel.</div><div class="terminal-window mt"><div class="term-output" id="termOutput"></div><div class="term-input-row"><span class="term-prompt">root@linux-sim:~#&nbsp;</span><input type="text" id="termInput" class="term-input" autocomplete="off" spellcheck="false" placeholder="type a command (try: help)"></div></div></section><section id="panel-audit" class="panel"><div class="panel-header"><h2>Security &amp; Audit Log</h2><span class="panel-desc">All distributed file operations logged &bull; Access control &bull; Path traversal prevention</span></div><div class="toolbar"><label>Filter:<select id="auditFilter" onchange="DashAPI.loadAudit()" style="margin-left:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:12px"><option value="">All</option><option>UPLOAD</option><option>DOWNLOAD</option><option>DELETE</option><option>RENAME</option><option>NODE_KILL</option><option>RE_REPLICATION</option></select></label></div><div class="table-wrap mt"><table class="data-table"><thead><tr><th>ID</th><th>Time</th><th>User</th><th>Action</th><th>Target</th><th>Result</th><th>IP</th><th>Details</th></tr></thead><tbody id="auditBody"></tbody></table></div><div class="dfs-connect-block">
+  <button class="dfs-toggle" onclick="var b=this.nextElementSibling;b.classList.toggle('hidden');this.innerHTML=(b.classList.contains('hidden')?'&#9654;':'&#9660;')+' How This Is Used in Our DFS'">&#9654; How This Is Used in Our DFS</button>
+  <div class="dfs-body hidden"><span class="dfs-badge dfs-badge-green">REAL DFS</span><p class="dfs-para"><code>SecurityManager::recordAudit()</code> (<code>src/security/security_manager.cpp</code>) is called at the end of every significant operation — upload, download, delete, rename, node kill, lock timeout, permission denial. Entries are written to SQLite via <code>MetadataManager::addAuditLog()</code> and served by <code>/api/audit</code>. Path traversal attempts (e.g. <code>/docs/../etc/passwd</code>) are caught by <code>sanitizePath()</code> and logged as failed with action UPLOAD and success=false — they appear in the table above with a red DENIED badge. Every entry includes user, action, target path, client IP, timestamp, and a human-readable detail string.</p></div>
+</div>
+</section>
+<section id="panel-walkthrough" class="panel">
+ <div class="panel-header"><h2>Guided DFS Walkthrough</h2><span class="panel-desc">Follow a 10 MB PDF upload through every OS concept layer of our distributed file system</span></div>
+ <div class="wt-header">
+  <div class="wt-meta">
+   <div class="wt-meta-item"><span class="wt-ml">File</span><span class="wt-mv mono">report.pdf</span></div>
+   <div class="wt-meta-item"><span class="wt-ml">Size</span><span class="wt-mv">10 MB</span></div>
+   <div class="wt-meta-item"><span class="wt-ml">Client</span><span class="wt-mv">Client A</span></div>
+   <div class="wt-meta-item"><span class="wt-ml">Status</span><span class="wt-mv" id="wtStatus"><span class="badge amber">READY</span></span></div>
+   <div class="wt-meta-item"><span class="wt-ml">Stage</span><span class="wt-mv" id="wtStageName">Not started</span></div>
+   <div class="wt-meta-item"><span class="wt-ml">Progress</span><span class="wt-mv" id="wtProgress">0 / 8</span></div>
+  </div>
+ </div>
+ <div class="wt-pipeline" id="wtPipeline"></div>
+ <div class="wt-detail-grid">
+  <div class="card" id="wtDetailCard">
+   <div class="card-title" id="wtDetailTitle">Select a stage to begin</div>
+   <div id="wtDetailWhat" class="wt-section hidden"><div class="wt-section-label">What is happening</div><div id="wtDetailWhatText" class="explanation-box"></div></div>
+   <div id="wtDetailOsConcept" class="wt-section hidden"><div class="wt-section-label">OS Concept Involved</div><div id="wtDetailOsText" class="explanation-box"></div></div>
+   <div id="wtDetailDfs" class="wt-section hidden"><div class="wt-section-label">How Our DFS Uses It</div><div id="wtDetailDfsText" class="explanation-box"></div></div>
+   <div id="wtDetailImpl" class="wt-section hidden"><div class="wt-section-label">Implementation Reference</div><div id="wtDetailImplText" class="explanation-box mono" style="font-size:11px"></div></div>
+   <div id="wtDetailLink" class="wt-section hidden"><div class="wt-section-label">Related Module</div><div id="wtDetailLinkText"></div></div>
+   <div id="wtLiveData" class="wt-section hidden"><div class="wt-section-label">Live Backend Data</div><div id="wtLiveDataText" class="explanation-box" style="font-size:11px;font-family:var(--font-mono)"></div></div>
+  </div>
+ </div>
+ <div class="wt-controls">
+  <button class="btn" onclick="Walkthrough.prev()">&#9664; Prev</button>
+  <button class="btn" id="wtPlayBtn" onclick="Walkthrough.togglePlay()">&#9654; Play</button>
+  <button class="btn" onclick="Walkthrough.next()">Next &#9654;</button>
+  <button class="btn" onclick="Walkthrough.reset()">&#8635; Reset</button>
+  <div class="wt-dots" id="wtDots"></div>
+ </div>
+</section></main></div><script src="app.js"></script></body></html>

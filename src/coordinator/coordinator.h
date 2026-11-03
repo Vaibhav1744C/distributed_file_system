@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "common/types.h"
 #include "metadata/metadata_manager.h"
@@ -59,6 +59,19 @@ public:
 
     // Node & Process Management
     bool launchNodeProcess(int node_id);
+    
+    // Dynamic node creation (runtime, no restart needed)
+    struct AddNodeResult {
+        bool success = false;
+        int node_id = 0;
+        int port = 0;
+        std::string storage_path;
+        std::string message;
+        int process_id = 0;
+    };
+    AddNodeResult addDynamicNode(int requested_id = -1, int requested_port = -1, const std::string& storage_dir = "");
+    bool removeDynamicNode(int node_id, bool force = false);
+    int findAvailablePort(int start_port = 9104);
     bool killNodeProcess(int node_id);
     void checkNodeHealth();
     void triggerReReplication();
@@ -101,3 +114,4 @@ private:
 };
 
 } // namespace dfs
+

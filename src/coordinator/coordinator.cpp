@@ -1,4 +1,4 @@
-#include "coordinator/coordinator.h"
+﻿#include "coordinator/coordinator.h"
 #include "common/logger.h"
 #include "common/json_helper.h"
 #include "common/sha256.h"
@@ -1135,4 +1135,268 @@ void Coordinator::setupWebRoutes() {
     });
 }
 
+// ── Dynamic Node Management ───────────────────────────────────────────────────
+
+int Coordinator::findAvailablePort(int start_port) {
+    // Try ports from start_port upward until we find one not in use
+    auto all_nodes = metadata_->getAllNodes();
+    std::set<int> used_ports;
+    for (const auto& n : all_nodes) used_ports.insert(n.port);
+    used_ports.insert(config_.rpc_port);
+    used_ports.insert(config_.web_port);
+
+    for (int p = start_port; p < start_port + 100; ++p) {
+        if (used_ports.count(p)) continue;
+        // Also verify the port is not already bound by trying to connect
+        SOCKET test_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (test_sock == INVALID_SOCKET) continue;
+        BOOL reuse = TRUE;
+        setsockopt(test_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse));
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        addr.sin_port = htons((u_short)p);
+        int res = bind(test_sock, (sockaddr*)&addr, sizeof(addr));
+        closesocket(test_sock);
+        if (res == 0) return p; // bindable = available
+    }
+    return -1;
+}
+
+Coordinator::AddNodeResult Coordinator::addDynamicNode(int requested_id, int requested_port, const std::string& storage_dir_in) {
+    AddNodeResult result;
+
+    // ── Step 1: Determine node ID ──────────────────────────────────────────
+    auto all_nodes = metadata_->getAllNodes();
+    int new_id = requested_id;
+    if (new_id <= 0) {
+        int max_id = 0;
+        for (const auto& n : all_nodes) max_id = std::max(max_id, n.id);
+        new_id = max_id + 1;
+    }
+    // Check ID not already taken
+    for (const auto& n : all_nodes) {
+        if (n.id == new_id) {
+            result.message = "Node ID " + std::to_string(new_id) + " already exists";
+            return result;
+        }
+    }
+
+    // ── Step 2: Determine port ─────────────────────────────────────────────
+    int port = requested_port > 0 ? requested_port : findAvailablePort(9100 + new_id);
+    if (port <= 0) {
+        result.message = "No available port found starting from 9104";
+        return result;
+    }
+    // Verify not in use
+    for (const auto& n : all_nodes) {
+        if (n.port == port) {
+            result.message = "Port " + std::to_string(port) + " already in use by node " + std::to_string(n.id);
+            return result;
+        }
+    }
+
+    // ── Step 3: Create storage directory ──────────────────────────────────
+    std::string storage_path = storage_dir_in.empty() 
+        ? ("storage/node" + std::to_string(new_id)) 
+        : storage_dir_in;
+    
+    try {
+        std::filesystem::create_directories(storage_path);
+    } catch (const std::exception& e) {
+        result.message = "Failed to create storage directory: " + std::string(e.what());
+        return result;
+    }
+
+    // ── Step 4: Register node in metadata ─────────────────────────────────
+    NodeInfo new_node;
+    new_node.id = new_id;
+    new_node.name = "StorageNode_" + std::to_string(new_id);
+    new_node.host = "127.0.0.1";
+    new_node.port = port;
+    new_node.storage_path = storage_path;
+    new_node.total_space = 100ULL * 1024 * 1024 * 1024; // 100GB
+    new_node.used_space = 0;
+    new_node.status = NodeStatus::OFFLINE; // becomes ONLINE after first heartbeat
+    new_node.auto_launched = true;
+    metadata_->registerOrUpdateNode(new_node);
+
+    // ── Step 5: Launch the storage node process ────────────────────────────
+    bool launched = process_manager_->launchStorageNode(
+        new_id, config_.storage_node_exe, port, storage_path
+    );
+    if (!launched) {
+        // Remove from metadata on launch failure
+        metadata_->updateNodeStatus(new_id, NodeStatus::OFFLINE);
+        result.message = "CreateProcessW failed for node " + std::to_string(new_id) + 
+                         ". Ensure dfs_storage_node.exe is in the working directory.";
+        return result;
+    }
+
+    // ── Step 6: Wait for first heartbeat (up to 8 seconds) ────────────────
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(8);
+    bool heartbeat_received = false;
+    while (std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        auto node_opt = metadata_->getNodeById(new_id);
+        if (node_opt && node_opt->last_heartbeat > 0) {
+            heartbeat_received = true;
+            metadata_->updateNodeStatus(new_id, NodeStatus::ONLINE);
+            break;
+        }
+    }
+
+    if (!heartbeat_received) {
+        LOG_WARN("Coordinator", "Node " + std::to_string(new_id) + " launched but no heartbeat received in 8s");
+        // Don't fail — the process might still be starting up
+    }
+
+    // Get PID from process manager
+    auto states = process_manager_->getAllProcessStates();
+    for (const auto& s : states) {
+        if (s.node_id == new_id) result.process_id = s.process_id;
+    }
+
+    security_manager_->recordAudit("admin", "NODE_ADD", "node_" + std::to_string(new_id), true,
+        "Dynamic node added: port=" + std::to_string(port) + " dir=" + storage_path, "127.0.0.1");
+
+    LOG_INFO("Coordinator", "Dynamic node " + std::to_string(new_id) + " launched on port " + 
+             std::to_string(port) + " [PID: " + std::to_string(result.process_id) + "]");
+
+    result.success = true;
+    result.node_id = new_id;
+    result.port = port;
+    result.storage_path = storage_path;
+    result.message = "Node " + std::to_string(new_id) + " successfully joined the cluster";
+    return result;
+}
+
+bool Coordinator::removeDynamicNode(int node_id, bool force) {
+    // Safety check: does node hold any replicas?
+    auto files = metadata_->listFiles("", false);
+    int replica_count = 0;
+    bool would_lose_data = false;
+
+    for (const auto& f : files) {
+        auto chunks = metadata_->getChunksForFile(f.id);
+        for (const auto& chk : chunks) {
+            bool on_this_node = std::find(chk.replica_node_ids.begin(), chk.replica_node_ids.end(), node_id) 
+                                != chk.replica_node_ids.end();
+            if (on_this_node) {
+                replica_count++;
+                if ((int)chk.replica_node_ids.size() <= 1) {
+                    would_lose_data = true;
+                }
+            }
+        }
+    }
+
+    if (would_lose_data && !force) {
+        LOG_WARN("Coordinator", "Cannot remove node " + std::to_string(node_id) + 
+                 ": it holds the only replica of some chunks");
+        return false;
+    }
+
+    // Kill the process
+    process_manager_->terminateProcess(node_id, true);
+    metadata_->updateNodeStatus(node_id, NodeStatus::OFFLINE);
+
+    security_manager_->recordAudit("admin", "NODE_REMOVE", "node_" + std::to_string(node_id), true,
+        "Node removed. Replicas on node: " + std::to_string(replica_count), "127.0.0.1");
+
+    return true;
+    // ── Dynamic Node Management API ────────────────────────────────────────
+    http_server_->registerRoute("POST", "/api/nodes/create", [this](const HttpRequest& req) {
+        HttpResponse resp;
+        JsonValue j = JsonValue::parse(req.body);
+        int req_id   = j["node_id"].asInt(-1);
+        int req_port = j["port"].asInt(-1);
+        std::string req_dir = j["storage_dir"].asString("");
+
+        auto result = addDynamicNode(req_id, req_port, req_dir);
+
+        JsonValue res;
+        res["success"]      = result.success;
+        res["node_id"]      = result.node_id;
+        res["port"]         = result.port;
+        res["storage_path"] = result.storage_path;
+        res["message"]      = result.message;
+        res["process_id"]   = result.process_id;
+
+        if (!result.success) resp.status_code = 400;
+        resp.body = res.serialize();
+        return resp;
+    });
+
+    http_server_->registerRoute("POST", "/api/nodes/remove", [this](const HttpRequest& req) {
+        HttpResponse resp;
+        JsonValue j = JsonValue::parse(req.body);
+        int node_id = j["node_id"].asInt(-1);
+        bool force  = j["force"].asBool(false);
+
+        if (node_id <= 0) {
+            resp.status_code = 400;
+            resp.body = "{\"error\":\"node_id required\"}";
+            return resp;
+        }
+
+        // Safety: check if would lose data
+        auto files = metadata_->listFiles("", false);
+        bool would_lose = false;
+        int replica_count = 0;
+        for (const auto& f : files) {
+            auto chunks = metadata_->getChunksForFile(f.id);
+            for (const auto& chk : chunks) {
+                bool on_node = std::find(chk.replica_node_ids.begin(), chk.replica_node_ids.end(), node_id)
+                               != chk.replica_node_ids.end();
+                if (on_node) {
+                    replica_count++;
+                    if ((int)chk.replica_node_ids.size() <= 1) would_lose = true;
+                }
+            }
+        }
+
+        if (would_lose && !force) {
+            JsonValue res;
+            res["error"] = "Node " + std::to_string(node_id) + " holds the only replica of " +
+                           std::to_string(replica_count) + " chunks. Use force=true to override (DATA LOSS WARNING).";
+            res["replica_count"] = replica_count;
+            res["would_lose_data"] = true;
+            resp.status_code = 409;
+            resp.body = res.serialize();
+            return resp;
+        }
+
+        bool ok = removeDynamicNode(node_id, force);
+        JsonValue res;
+        res["success"] = ok;
+        res["node_id"] = node_id;
+        res["replicas_on_node"] = replica_count;
+        res["message"] = ok ? "Node removed" : "Remove failed";
+        if (!ok) resp.status_code = 500;
+        resp.body = res.serialize();
+        return resp;
+    });
+
+    http_server_->registerRoute("GET", "/api/nodes/preview", [this](const HttpRequest& req) {
+        HttpResponse resp;
+        auto all_nodes = metadata_->getAllNodes();
+        int max_id = 0;
+        for (const auto& n : all_nodes) max_id = std::max(max_id, n.id);
+        int new_id = max_id + 1;
+        int new_port = findAvailablePort(9100 + new_id);
+        std::string new_dir = "storage/node" + std::to_string(new_id);
+
+        JsonValue res;
+        res["suggested_id"]   = new_id;
+        res["suggested_port"] = new_port;
+        res["suggested_dir"]  = new_dir;
+        res["existing_nodes"] = (int)all_nodes.size();
+        resp.body = res.serialize();
+        return resp;
+    });
+}
+
 } // namespace dfs
+
+
