@@ -1,0 +1,25 @@
+# Runtime data - not source code
+
+# SQLite runtime files
+data/*.db-shm
+data/*.db-wal
+
+# Stored file chunks
+storage/
+
+# Build output
+build/*.exe
+build/*.a
+build/*.o
+build/CMakeFiles/
+build/CMakeCache.txt
+build/Makefile
+build/cmake_install.cmake
+build/*.make
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
