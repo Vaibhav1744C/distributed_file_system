@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(p)p.classList.add('active');
       const id=a.dataset.panel;
       if(id==='wal')DashAPI.loadWal();
+      if(id==='dfsops')DfsOps.refresh();
       if(id==='audit')DashAPI.loadAudit();
       if(id==='files')FileMgr.loadFiles();
       if(id==='locks')DashAPI.loadLocks();
@@ -81,8 +82,8 @@ const DashAPI={
     const d=await this.get('/api/status');if(!d)return;
     document.getElementById('hdrPid').textContent=d.coordinator_pid||'--';
     document.getElementById('hdrThreads').textContent=d.active_worker_threads||0;
-    document.getElementById('ovCoordPid').textContent=d.coordinator_pid||'--';
-    document.getElementById('ovThreads').textContent=d.active_worker_threads||0;
+    
+    
     document.getElementById('clusterStatusLabel').textContent='ONLINE';
     document.getElementById('clusterPill').style.color='var(--accent-green)';
   },
@@ -90,7 +91,7 @@ const DashAPI={
     const nodes=await this.get('/api/nodes');if(!nodes)return;
     this._nodes=nodes;
     const on=nodes.filter(n=>n.status==='ONLINE'||n.is_process_running).length;
-    document.getElementById('ovNodes').textContent=on+'/'+nodes.length;
+    document.getElementById('metNodes').textContent=on+'/'+nodes.length;
     const g=document.getElementById('nodesGrid');if(!g)return;
     g.innerHTML=nodes.map(n=>{
       const isOn=n.status==='ONLINE'||n.is_process_running;
@@ -113,7 +114,7 @@ const DashAPI={
   async startNode(id){await this.post('/api/nodes/start',{node_id:id});this.loadNodes();},
   async loadLocks(){
     const d=await this.get('/api/locks');if(!d)return;
-    document.getElementById('ovLocks').textContent=d.active_lock_count||0;
+    
     ['lkActive','lkWaiting','lkAcquired','lkTimeouts','lkPrevented'].forEach((id,i)=>{
       const v=[d.active_lock_count,d.waiting_request_count,d.total_acquired,d.total_timeouts,d.total_deadlocks_prevented][i];
       const el=document.getElementById(id);if(el)el.textContent=v||0;
@@ -136,7 +137,7 @@ const DashAPI={
   async loadBuffer(){
     const b=await this.get('/api/buffer');if(!b)return;
     const pct=b.capacity>0?Math.round(b.current_occupancy/b.capacity*100):0;
-    document.getElementById('ovBuffer').textContent=pct+'%';
+    
     const ring=document.getElementById('ringBuf');if(!ring)return;
     ring.innerHTML=Array.from({length:b.capacity},(_, i)=>'<div class="ring-slot'+(i<b.current_occupancy?' filled':'')+'">'+( i<b.current_occupancy?'CHK':''+(i+1))+'</div>').join('');
     const bs=document.getElementById('bufStats');
@@ -144,7 +145,7 @@ const DashAPI={
   },
   async loadCache(){
     const c=await this.get('/api/cache');if(!c)return;
-    document.getElementById('ovCache').textContent=c.hit_ratio_pct.toFixed(1)+'%';
+    
     const cs=document.getElementById('cacheStatsRow');
     if(cs)cs.innerHTML='<div class="cache-stat"><div class="cs-val" style="color:var(--accent-green)">'+c.hit_ratio_pct.toFixed(1)+'%</div><div class="cs-label">Hit Ratio</div></div><div class="cache-stat"><div class="cs-val">'+c.hit_count+'</div><div class="cs-label">Hits</div></div><div class="cache-stat"><div class="cs-val">'+c.miss_count+'</div><div class="cs-label">Misses</div></div><div class="cache-stat"><div class="cs-val">'+c.eviction_count+'</div><div class="cs-label">Evictions</div></div><div class="cache-stat"><div class="cs-val">'+c.current_items+'/'+c.capacity_items+'</div><div class="cs-label">Items</div></div>';
     const chain=document.getElementById('lruChain');
@@ -229,17 +230,71 @@ const FileMgr={
     const r=['---','--x','-w-','-wx','r--','r-x','rw-','rwx'];
     return r[(p>>6)&7]+r[(p>>3)&7]+r[p&7];
   },
+  onFileSelected(input){
+    const file = input.files[0];
+    if(!file) return;
+    const pathEl = document.getElementById('upPath');
+    pathEl.value = '/uploads/' + file.name;
+    const info = document.getElementById('upFileInfo');
+    if(info){ info.style.display='block'; info.textContent = 'Selected: '+file.name+' ('+fmtBytes(file.size)+')'; }
+    this._selectedFile = file;
+  },
   async upload(){
     const path=document.getElementById('upPath').value;
-    const content=document.getElementById('upContent').value;
     const repl=parseInt(document.getElementById('upRepl').value);
     const owner=document.getElementById('upOwner').value;
     if(!path){alert('Path required');return;}
+    let content = document.getElementById('upContent').value;
+    // If a real file was selected and no text content typed, read the file
+    if(!content && this._selectedFile) {
+      try {
+        content = await new Promise((resolve,reject)=>{
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = reject;
+          // Read as text for text files, base64 for binary
+          const isText = this._selectedFile.type.startsWith('text/') || 
+                         this._selectedFile.name.match(/\.(txt|md|csv|json|js|css|html|xml|log)$/i);
+          if(isText) reader.readAsText(this._selectedFile);
+          else reader.readAsDataURL(this._selectedFile); // base64
+        });
+        // Strip data URL prefix for base64
+        if(content.startsWith('data:')) content = content.split(',')[1] || content;
+      } catch(e) { alert('Could not read file: '+e); return; }
+    }
+    if(!content){ alert('No content — select a file or type text'); return; }
+    const btn = document.querySelector('#fileUploadForm .btn-success');
+    if(btn){ btn.textContent='Uploading...'; btn.disabled=true; }
     const r=await DashAPI.post('/api/files/upload',{path,content,replication_factor:repl,owner});
-    if(r&&r.status==='OK'){this.closeUpload();document.getElementById('upContent').value='';this.loadFiles();}
-    else alert('Upload failed: '+(r&&r.error||'Unknown error'));
+    if(btn){ btn.textContent='Upload'; btn.disabled=false; }
+    if(r&&r.status==='OK'){
+      this.closeUpload();
+      document.getElementById('upContent').value='';
+      this._selectedFile=null;
+      const info=document.getElementById('upFileInfo');
+      if(info) info.style.display='none';
+      const fi=document.getElementById('upFileInput');
+      if(fi) fi.value='';
+      this.loadFiles();
+      alert('File uploaded successfully!');
+    } else alert('Upload failed: '+(r&&r.error||'Unknown error'));
   },
-  download(path){window.open('/api/files/download?path='+encodeURIComponent(path),'_blank');},
+  async download(path){
+    try {
+      const resp = await fetch('/api/files/download?path='+encodeURIComponent(path));
+      if(!resp.ok){ const err=await resp.json().catch(()=>null); alert('Download failed: '+(err&&err.error||'File not found or replicas unavailable. Make sure the cluster is running and nodes are ONLINE.')); return; }
+      const ct = resp.headers.get('Content-Type')||'application/octet-stream';
+      const blob = await resp.blob();
+      if(blob.size===0){ alert('File has no content (0 bytes). The file may not have been uploaded correctly.'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url;
+      a.download=path.split('/').pop()||'download';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch(e){ alert('Download error: '+e.message); }
+  },
   async del(path){
     if(!confirm('Delete '+path+'?'))return;
     await fetch('/api/files?path='+encodeURIComponent(path),{method:'DELETE'});
@@ -1699,3 +1754,199 @@ Terminal._dfsCommand = async function(args) {
   }
   this._print('dfs: unknown subcommand: ' + sub + '. Try: dfs help', 'err');
 };
+// ─── DFS Overview Dashboard ───────────────────────────────────────────────────
+const DfsOverview = {
+  _startTime: Date.now(),
+  async refresh() {
+    const [status, nodes, files, cache, buf] = await Promise.all([
+      DashAPI.get('/api/status'),
+      DashAPI.get('/api/nodes'),
+      DashAPI.get('/api/files'),
+      DashAPI.get('/api/cache'),
+      DashAPI.get('/api/buffer')
+    ]);
+
+    // Hero status
+    const heroText = document.getElementById('heroStatusText');
+    if (heroText) heroText.textContent = status ? 'CLUSTER ONLINE' : 'CONNECTING...';
+
+    if (nodes) {
+      const online = nodes.filter(n => n.status === 'ONLINE' || n.is_process_running);
+      const el = document.getElementById('metNodes');
+      if (el) el.textContent = online.length + ' / ' + nodes.length;
+
+      // Node strip
+      const strip = document.getElementById('dfsNodesStrip');
+      if (strip) {
+        strip.innerHTML = nodes.map(n => {
+          const on = n.status === 'ONLINE' || n.is_process_running;
+          const usedPct = n.total_space > 0 ? Math.min(100,(n.used_space/n.total_space*100)).toFixed(1) : 0;
+          return '<div class="dfs-node-chip ' + (on?'online':'offline') + '">' +
+            '<div>' +
+            '<div class="dfs-node-name">' + esc(n.name) + '</div>' +
+            '<div class="dfs-node-meta">PID: ' + (n.process_id||'--') + ' &bull; :' + n.port + '</div>' +
+            '<div class="dfs-node-meta">' + esc(n.storage_path) + '</div>' +
+            '</div>' +
+            '<div style="margin-left:auto;text-align:right">' +
+            '<span class="badge ' + (on?'green':'red') + '">' + (on?'ONLINE':'OFFLINE') + '</span>' +
+            '<div class="dfs-node-bar"><div style="width:80px;background:var(--border);border-radius:3px;height:6px;margin-top:4px"><div style="width:' + usedPct + '%;height:6px;border-radius:3px;background:var(--accent-green)"></div></div>' +
+            '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px">' + fmtBytes(n.used_space) + ' used</div>' +
+            '</div></div>' +
+            '</div>';
+        }).join('');
+      }
+    }
+
+    if (files) {
+      const el = document.getElementById('metFiles');
+      if (el) el.textContent = files.length;
+      const totalChunks = files.reduce((s,f) => s + (f.chunks ? f.chunks.length : 0), 0);
+      const ce = document.getElementById('metChunks');
+      if (ce) ce.textContent = totalChunks;
+    }
+
+    if (nodes) {
+      const totalUsed = nodes.reduce((s,n) => s + (n.used_space||0), 0);
+      const ue = document.getElementById('metUsed');
+      if (ue) ue.textContent = fmtBytes(totalUsed);
+    }
+
+    if (status) {
+      const upSec = Math.floor((Date.now() - this._startTime) / 1000);
+      const ue = document.getElementById('metUptime');
+      if (ue) ue.textContent = upSec > 3600 ? Math.floor(upSec/3600)+'h '+Math.floor((upSec%3600)/60)+'m' : Math.floor(upSec/60)+'m '+upSec%60+'s';
+      const pid = document.getElementById('hdrPid');
+      if (pid) pid.textContent = status.coordinator_pid || '--';
+      const thr = document.getElementById('hdrThreads');
+      if (thr) thr.textContent = status.active_worker_threads || 0;
+    }
+
+    // Also update topology SVG
+    if (nodes) this.drawTopo(nodes, status);
+    // Event log from audit
+    this.loadEventLog();
+  },
+
+  drawTopo(nodes, status) {
+    const svg = document.getElementById('topoSvg');
+    if (!svg) return;
+    const W = svg.parentElement ? svg.parentElement.offsetWidth || 500 : 500;
+    const H = 260;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    const cx = W / 2;
+    let h = '<defs><marker id="arr2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker></defs>';
+    // Client box
+    h += '<rect x="' + (cx-50) + '" y="10" width="100" height="34" rx="5" fill="#1c2128" stroke="#58a6ff" stroke-width="1.5"/>';
+    h += '<text x="' + cx + '" y="32" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="700" font-family="JetBrains Mono,monospace">CLIENT</text>';
+    // Arrow down
+    h += '<line x1="' + cx + '" y1="44" x2="' + cx + '" y2="78" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr2)"/>';
+    h += '<text x="' + (cx+5) + '" y="66" fill="#8b949e" font-size="9" font-family="monospace">HTTP :8080</text>';
+    // Coordinator box
+    const pid = status ? status.coordinator_pid : '--';
+    h += '<rect x="' + (cx-80) + '" y="80" width="160" height="44" rx="5" fill="#1c2128" stroke="#3fb950" stroke-width="2"/>';
+    h += '<text x="' + cx + '" y="98" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="700" font-family="JetBrains Mono,monospace">COORDINATOR</text>';
+    h += '<text x="' + cx + '" y="114" text-anchor="middle" fill="#8b949e" font-size="9" font-family="monospace">PID:' + pid + ' &bull; RPC :9001</text>';
+    // Nodes row
+    if (nodes && nodes.length) {
+      const sp = W / (nodes.length + 1);
+      nodes.forEach((n, i) => {
+        const nx = sp * (i + 1);
+        const ny = 190;
+        const on = n.status === 'ONLINE' || n.is_process_running;
+        const col = on ? '#3fb950' : '#f85149';
+        h += '<line x1="' + cx + '" y1="124" x2="' + nx + '" y2="' + (ny-24) + '" stroke="' + col + '" stroke-width="1" stroke-dasharray="' + (on?'0':'5,3') + '" marker-end="url(#arr2)"/>';
+        h += '<text x="' + ((cx+nx)/2+4) + '" y="' + ((124+ny-24)/2) + '" fill="#8b949e" font-size="8" font-family="monospace">TCP :' + n.port + '</text>';
+        h += '<rect x="' + (nx-45) + '" y="' + (ny-24) + '" width="90" height="48" rx="5" fill="#1c2128" stroke="' + col + '" stroke-width="1.5"/>';
+        h += '<text x="' + nx + '" y="' + (ny-6) + '" text-anchor="middle" fill="' + col + '" font-size="10" font-weight="700" font-family="JetBrains Mono,monospace">Node ' + n.id + '</text>';
+        h += '<text x="' + nx + '" y="' + (ny+8) + '" text-anchor="middle" fill="#8b949e" font-size="9" font-family="monospace">:' + n.port + '</text>';
+        h += '<text x="' + nx + '" y="' + (ny+20) + '" text-anchor="middle" fill="#8b949e" font-size="8" font-family="monospace">' + fmtBytes(n.used_space) + '</text>';
+        if (on) h += '<circle cx="' + (nx+38) + '" cy="' + (ny-18) + '" r="4" fill="#3fb950"><animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></circle>';
+      });
+    }
+    svg.innerHTML = h;
+  },
+
+  async loadEventLog() {
+    const logs = await DashAPI.get('/api/audit');
+    if (!logs) return;
+    const el = document.getElementById('ovEventLog');
+    if (!el) return;
+    const opColor = {UPLOAD:'ev-ok', DOWNLOAD:'ev-ok', DELETE:'ev-fail', RENAME:'', NODE_KILL:'ev-fail', RE_REPLICATION:'', NODE_ADD:'ev-ok'};
+    el.innerHTML = logs.slice(0, 15).map(a => {
+      const cls = a.success ? (opColor[a.action] || '') : 'ev-fail';
+      return '<div class="event-entry"><span class="ev-time">' + fmtTime(a.timestamp) + '</span>' +
+        '<span class="' + cls + '"> [' + esc(a.action) + ']</span> ' +
+        esc(a.user) + ' &rarr; <span style="color:var(--accent-cyan)">' + esc(a.target_path) + '</span>' +
+        (a.success ? '' : ' <span class="ev-fail">DENIED</span>') + '</div>';
+    }).join('');
+  }
+};
+
+// ─── DFS Operations Page ──────────────────────────────────────────────────────
+const DfsOps = {
+  async refresh() {
+    const filter = document.getElementById('opsFilter') ? document.getElementById('opsFilter').value : '';
+    const [logs, nodes, files] = await Promise.all([
+      DashAPI.get('/api/audit'),
+      DashAPI.get('/api/nodes'),
+      DashAPI.get('/api/files')
+    ]);
+
+    // Operations table
+    const tbody = document.getElementById('dfsOpsBody');
+    if (tbody && logs) {
+      const filtered = filter ? logs.filter(l => l.action === filter) : logs;
+      const badgeCls = {
+        UPLOAD: 'ops-badge-upload', DOWNLOAD: 'ops-badge-download',
+        DELETE: 'ops-badge-delete', RENAME: 'ops-badge-other',
+        NODE_KILL: 'ops-badge-other', RE_REPLICATION: 'ops-badge-other',
+        NODE_ADD: 'ops-badge-upload'
+      };
+      tbody.innerHTML = filtered.map(a => {
+        const bc = badgeCls[a.action] || 'ops-badge-other';
+        return '<tr><td>' + fmtTime(a.timestamp) + '</td>' +
+          '<td><span class="' + bc + '">' + esc(a.action) + '</span></td>' +
+          '<td><strong>' + esc(a.target_path) + '</strong></td>' +
+          '<td>' + esc(a.user) + '</td>' +
+          '<td><span class="badge ' + (a.success?'green':'red') + '">' + (a.success?'OK':'DENIED') + '</span></td>' +
+          '<td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(a.details) + '</td></tr>';
+      }).join('') || '<tr><td colspan=6 style="text-align:center;color:var(--text-secondary)">No operations recorded yet. Upload a file to see activity.</td></tr>';
+    }
+
+    // Storage bars
+    const barsEl = document.getElementById('dfsStorageBars');
+    if (barsEl && nodes) {
+      barsEl.innerHTML = nodes.map(n => {
+        const pct = n.total_space > 0 ? Math.min(100,(n.used_space/n.total_space*100)).toFixed(1) : 0;
+        const on = n.status==='ONLINE'||n.is_process_running;
+        return '<div class="storage-bar-row">' +
+          '<div class="storage-bar-label"><span class="badge '+(on?'green':'red')+'" style="margin-right:6px">'+(on?'ON':'OFF')+'</span>' + esc(n.name) + '</div>' +
+          '<div class="storage-bar-track"><div class="storage-bar-fill" style="width:'+Math.max(pct,0.5)+'%"></div></div>' +
+          '<div class="storage-bar-val">' + fmtBytes(n.used_space) + ' / ' + fmtBytes(n.total_space) + ' (' + pct + '%)</div>' +
+          '</div>';
+      }).join('');
+    }
+  }
+};
+
+// ─── Patch DashAPI.init to also refresh DFS overview ─────────────────────────
+const _origDashInit = DashAPI.init.bind(DashAPI);
+DashAPI.init = function() {
+  _origDashInit();
+  DfsOverview.refresh();
+  setInterval(() => DfsOverview.refresh(), 4000);
+};
+
+// ─── Patch nav click to trigger panel-specific refresh ───────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-panel="dfsops"]').forEach(el => {
+    el.addEventListener('click', () => setTimeout(() => DfsOps.refresh(), 50));
+  });
+  document.querySelectorAll('[data-panel="overview"]').forEach(el => {
+    el.addEventListener('click', () => setTimeout(() => DfsOverview.refresh(), 50));
+  });
+  // Keep cluster topology in sync for DFS nav
+  document.querySelectorAll('[data-panel="cluster"]').forEach(el => {
+    el.addEventListener('click', () => setTimeout(() => DashAPI.loadNodes(), 50));
+  });
+});
